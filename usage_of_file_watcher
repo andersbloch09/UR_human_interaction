@@ -1,0 +1,13 @@
+# main.py
+from file_watcher import SSHFileWatcher
+
+watcher = SSHFileWatcher(
+    hostname="your.server.ip",
+    username="your_user",
+    password="your_password"
+)
+
+for path, content in watcher.watch_file("/path/to/remote/file.txt", poll_interval=2.0):
+    print(f"File changed: {path}")
+    print(f"New content:\n{content}")
+    # Here you can call your robot script to execute actions based on new content
