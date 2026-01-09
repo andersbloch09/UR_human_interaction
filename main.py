@@ -66,7 +66,8 @@ class LLM_Agent:
                 time.sleep(2)
 # ---------- UR Dashboard control loop ----------
 
-UR_IP = "172.17.0.2"
+#UR_IP = "172.17.0.2"
+UR_IP = "192.168.1.3"
 DASHBOARD_PORT = 29999
 
 # Load YAML
@@ -83,7 +84,7 @@ def send_cmd(sock, cmd: str):
     print(f"<<< {response}")
     return response
 
-def execute_actions(sock, actions: List[Dict], programs_folder="/ursim/programs"):
+def execute_actions(sock, actions: List[Dict], programs_folder="/programs/interaction/"):
     # Execute each program
     for action in actions:
         program = action.get("program")
@@ -152,7 +153,7 @@ def main():
         #actions = llm_agent.process_request(input_text)
         #print(f"LLM returned actions: {actions}")
         
-    actions = [{"program": "greet.urp"}]
+    actions = [{"program": "greet.urp"}, {"program": "think.urp"}]
     execute_actions(sock, actions)
 
     # Optional: stop if any action is stop

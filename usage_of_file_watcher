@@ -1,13 +1,29 @@
-# main.py
 from file_watcher import SSHFileWatcher
+import json
 
 watcher = SSHFileWatcher(
-    hostname="your.server.ip",
-    username="your_user",
-    password="your_password"
+    hostname="130.225.37.138",
+    username="ubuntu",
+    key_filename="/home/anders/Documents/LLM-Max.pem",
+    poll_interval=2.0
 )
 
-for path, content in watcher.watch_file("/path/to/remote/file.txt", poll_interval=2.0):
-    print(f"File changed: {path}")
-    print(f"New content:\n{content}")
-    # Here you can call your robot script to execute actions based on new content
+REMOTE_FILE = "/home/ubuntu/ur_movement/sample.json"
+
+for path, content in watcher.watch_file(REMOTE_FILE):
+    print(f"\nFile changed: {path}")
+    print("Raw content:")
+    print(content)
+
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as e:
+        print("Invalid JSON:", e)
+        continue
+
+    print("Parsed JSON:")
+    print(data)
+
+    # ---- Example robot logic ----
+    # if data["action"] == "move":
+    #     robot.move(data["x"], data["y"])
