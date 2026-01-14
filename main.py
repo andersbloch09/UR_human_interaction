@@ -5,6 +5,10 @@ import json
 import requests
 import re
 from typing import List, Dict
+from file_watcher import SSHFileWatcher
+import threading
+
+REMOTE_FILE = "/home/ubuntu/ur_movement/sample.json"
 
 # ---------- LLM Agent ----------
 class LLM_Agent:
@@ -13,7 +17,7 @@ class LLM_Agent:
         self.max_retries = llm_config.get("max_retries", 3)
         self.llm_url = llm_config["url"]
         self.system_prompt = llm_config["system_prompt"]
-
+    
     def process_request(self, user_prompt: str, timeout: float = 15.0) -> List[Dict]:
         message = {
             "model": self.model_name,
@@ -84,6 +88,11 @@ def send_cmd(sock, cmd: str):
     print(f"<<< {response}")
     return response
 
+def run_think_in_background(sock):
+    thread = threading.Thread(target=execute_actions, args=(sock, [{"program": "think.urp"}]))
+    thread.start()
+    return thread
+
 def execute_actions(sock, actions: List[Dict], programs_folder="/programs/interaction/"):
     # Execute each program
     for action in actions:
@@ -139,26 +148,46 @@ def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((UR_IP, DASHBOARD_PORT))
 
+    watcher = SSHFileWatcher(
+    hostname="130.225.37.138",
+    username="ubuntu",
+    key_filename="/home/anders/Documents/LLM-Max.pem",
+    poll_interval=2.0
+)
+    
     # Initial message
     print(sock.recv(1024).decode().strip())
 
-    # Power on & brake release
-    for cmd in ["power on", "brake release"]:
-        send_cmd(sock, cmd)
+    for path, content in watcher.watch_file(REMOTE_FILE):
+        print(f"\nFile changed: {path}")
 
-    #while True:
-        #input_text = input("Enter your instruction for the robot (or 'exit' to quit): ")
-        #if input_text.lower() == "exit":
-        #    break
-        #actions = llm_agent.process_request(input_text)
-        #print(f"LLM returned actions: {actions}")
-        
-    actions = [{"program": "greet.urp"}, {"program": "think.urp"}]
-    execute_actions(sock, actions)
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError as e:
+            print("Invalid JSON:", e)
+            continue
 
-    # Optional: stop if any action is stop
-    #if any(a.get("call", "").lower() == "stop" for a in actions):
-    #    break
+        # Example: JSON → instruction
+        user_prompt = data.get("instruction")
+        if not user_prompt:
+            print("No instruction found in JSON")
+            continue
+
+        think_thread = run_think_in_background(sock)
+
+        actions = llm_agent.process_request(user_prompt)
+
+        # Wait for think.urp to finish before LLM actions
+        think_thread.join()
+
+        # Execute actions if any
+        if actions:
+            print("Executing actions:", actions)
+            execute_actions(sock, actions)
+        else:
+            print("No actions returned from LLM")
+
+        execute_actions(sock, actions)
 
     sock.close()
 
