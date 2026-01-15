@@ -51,7 +51,7 @@ llm:
 
     Input: "Here is a joke"
     Output:
-    [{"program": "headspin.urp"}]
+    [{"program": "headspin.urp"}, {"program": "talkmotion.urp"}]
 
     Input: "Let's greet and then I will tell you something."
     Output:
