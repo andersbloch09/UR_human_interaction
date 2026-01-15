@@ -37,7 +37,7 @@ llm:
     Output:
     [{"program": "bow.urp"}]
 
-    Input: "Please answer yes or no to this question."
+    Input: "Please answer yes and no to this question."
     Output:
     [{"program": "yes.urp"}, {"program": "no.urp"}]
 
