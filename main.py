@@ -8,7 +8,7 @@ from typing import List, Dict
 from file_watcher import SSHFileWatcher
 import threading
 
-REMOTE_FILE = "/home/ubuntu/ur_movement/sample.json"
+REMOTE_FILE = "/home/ubuntu/ur_movement/output.json"
 
 # ---------- LLM Agent ----------
 class LLM_Agent:
@@ -158,8 +158,20 @@ def main():
     # Initial message
     print(sock.recv(1024).decode().strip())
 
+    initial_content = None
+
     for path, content in watcher.watch_file(REMOTE_FILE):
         print(f"\nFile changed: {path}")
+
+        if initial_content is None:
+            initial_content = content
+            print("Initial file read. Ignoring for first run.")
+            continue
+
+        if content == initial_content:
+            continue
+
+        initial_content = content  # update stored content
 
         try:
             data = json.loads(content)
@@ -168,17 +180,18 @@ def main():
             continue
 
         # Example: JSON → instruction
-        user_prompt = data.get("instruction")
+        user_prompt = data.get("text")
         if not user_prompt:
             print("No instruction found in JSON")
             continue
 
-        think_thread = run_think_in_background(sock)
+        #think_thread = run_think_in_background(sock)
 
         actions = llm_agent.process_request(user_prompt)
+        print("LLM returned actions:", actions)
 
         # Wait for think.urp to finish before LLM actions
-        think_thread.join()
+        #think_thread.join()
 
         # Execute actions if any
         if actions:
@@ -187,7 +200,6 @@ def main():
         else:
             print("No actions returned from LLM")
 
-        execute_actions(sock, actions)
 
     sock.close()
 
